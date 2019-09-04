@@ -41,5 +41,16 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>kansha.hunter</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kansha-hunter</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
