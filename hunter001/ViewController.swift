@@ -17,6 +17,8 @@ class ViewController: UIViewController, WKNavigationDelegate {
     private var needLogin: Bool = true
     
     override func viewDidLoad() {
+        authorize()
+        fetchSessionID()
         super.viewDidLoad()
         let appDelegate:AppDelegate = UIApplication.shared.delegate as! AppDelegate
         appDelegate.viewController = self
@@ -42,9 +44,9 @@ class ViewController: UIViewController, WKNavigationDelegate {
     override func viewDidAppear(_ animated: Bool) {
         var webPage: String
         if (needLogin) {
-            webPage = "http://02faad66.ngrok.io/users/login?app=ios"
+            webPage = "https://a74632eb.ngrok.io/users/login?app=ios"
         } else {
-            webPage = "http://02faad66.ngrok.io/"
+            webPage = "https://a74632eb.ngrok.io/"
         }
         safariVC = SFSafariViewController(url: NSURL(string: webPage)! as URL)
         safariVC.delegate = self
@@ -63,8 +65,66 @@ class ViewController: UIViewController, WKNavigationDelegate {
         needLogin = false
     }
     
-
+    // ---------------------------------------------
+    // Fetch session ID from UserDefaults (Temporarily)
+    // ---------------------------------------------
+    private func fetchSessionID() -> String {
+        let suiteName: String = "group.thanks.hunter001"
+        let keyName: String = "sessionID"
+        // fetch Data
+        let sharedDefaults: UserDefaults = UserDefaults(suiteName: suiteName)!
+        let sessionID = sharedDefaults.object(forKey: keyName)
+        print("fetchSessionID : \(sessionID!)")
+        return "\(sessionID!)"
+    }
     
+    private func authorize() -> Bool {
+        let stringUrl = "https://a74632eb.ngrok.io/posts/new/general"
+        let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
+        // First
+        let jar = HTTPCookieStorage.shared
+        let cookieHeaderField = ["Set-Cookie": "_session_id=\(fetchSessionID());Secure"] // Or ["Set-Cookie": "key=value, key2=value2"] for multiple cookies
+        let cookies = HTTPCookie.cookies(withResponseHeaderFields: cookieHeaderField, for: url)
+        jar.setCookies(cookies, for: url, mainDocumentURL: url)
+        
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        // nouse
+        //req.addValue("_session_id=\(fetchSessionID())", forHTTPHeaderField: "Cookie")
+        
+        let (data, response, error) = URLSession.shared.synchronousDataTask(with: req)
+        let httpResponse = response as? HTTPURLResponse
+        print(httpResponse?.statusCode)
+        let str: String? = String(data: data!, encoding: .utf8)
+        print(str)
+        if (error == nil) {
+            return true
+        } else {
+            return false
+        }
+    }
+}
+
+extension URLSession {
+    func synchronousDataTask(with url: URLRequest) -> (Data?, URLResponse?, Error?) {
+        var data: Data?
+        var response: URLResponse?
+        var error: Error?
+        let semaphore = DispatchSemaphore(value: 0)
+        let dataTask = self.dataTask(with: url) {
+            data = $0
+            response = $1
+            error = $2
+            
+            semaphore.signal()
+        }
+        dataTask.resume()
+        
+        _ = semaphore.wait(timeout: .distantFuture)
+        
+        return (data, response, error)
+    }
 }
 
 // MARK: SFSafariViewControllerDelegate

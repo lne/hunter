@@ -10,6 +10,8 @@ import UIKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
+    let suiteName: String = "group.thanks.hunter001"
+    let keyName: String = "sessionID"
 
     var window: UIWindow?
     var viewController: ViewController!
@@ -27,7 +29,35 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         print("scheme : \(url.scheme!)")
         print("host : \(url.host!)")
         print("query : \(url.query!)")
+        if (url.query != nil) {
+            let sessionID = url.query!.split(separator: "=").last
+            print("sessionID : \(sessionID!)")
+            saveSessionID(sessionID: "\(sessionID!)")
+            fetchSessionID()
+        }
         return true
+    }
+    
+    // ---------------------------------------------
+    // Save session ID to UserDefaults
+    // ---------------------------------------------
+    private func saveSessionID(sessionID: String) {
+        print("saveSessionID")
+        // Save Data
+        let sharedDefaults: UserDefaults = UserDefaults(suiteName: suiteName)!
+        sharedDefaults.set(sessionID, forKey: keyName)
+        sharedDefaults.synchronize()
+    }
+    
+    // ---------------------------------------------
+    // Fetch session ID from UserDefaults
+    // ---------------------------------------------
+    private func fetchSessionID() -> String {
+        // fetch Data
+        let sharedDefaults: UserDefaults = UserDefaults(suiteName: suiteName)!
+        let sessionID = sharedDefaults.object(forKey: keyName)
+        print("fetchSessionID : \(sessionID!)")
+        return "\(sessionID!)"
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
