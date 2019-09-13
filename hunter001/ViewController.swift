@@ -9,6 +9,7 @@
 import UIKit
 import WebKit
 import SafariServices
+import Foundation
 
 class ViewController: UIViewController, WKNavigationDelegate {
 
@@ -17,11 +18,11 @@ class ViewController: UIViewController, WKNavigationDelegate {
     private var needLogin: Bool = true
     
     override func viewDidLoad() {
-        authorize()
-        fetchSessionID()
         super.viewDidLoad()
         let appDelegate:AppDelegate = UIApplication.shared.delegate as! AppDelegate
         appDelegate.viewController = self
+        let token = fetchToken()
+        print("Token: \(token)")
 //        let config = WKWebViewConfiguration()
 //        config.allowsInlineMediaPlayback = true
         
@@ -42,11 +43,12 @@ class ViewController: UIViewController, WKNavigationDelegate {
         
     }
     override func viewDidAppear(_ animated: Bool) {
+        doPost()
         var webPage: String
         if (needLogin) {
-            webPage = "https://a74632eb.ngrok.io/users/login?app=ios"
+            webPage = "https://da8a6a38.ngrok.io/users/login?app=ios"
         } else {
-            webPage = "https://a74632eb.ngrok.io/"
+            webPage = "https://da8a6a38.ngrok.io/"
         }
         safariVC = SFSafariViewController(url: NSURL(string: webPage)! as URL)
         safariVC.delegate = self
@@ -68,32 +70,82 @@ class ViewController: UIViewController, WKNavigationDelegate {
     // ---------------------------------------------
     // Fetch session ID from UserDefaults (Temporarily)
     // ---------------------------------------------
-    private func fetchSessionID() -> String {
+    private func fetchToken() -> String {
         let suiteName: String = "group.thanks.hunter001"
-        let keyName: String = "sessionID"
+        let keyName: String = "token"
         // fetch Data
         let sharedDefaults: UserDefaults = UserDefaults(suiteName: suiteName)!
-        let sessionID = sharedDefaults.object(forKey: keyName)
-        print("fetchSessionID : \(sessionID!)")
-        return "\(sessionID!)"
+        let data = sharedDefaults.object(forKey: keyName)
+        if data != nil {
+            return data as! String
+        } else {
+            return ""
+        }
     }
     
     private func authorize() -> Bool {
-        let stringUrl = "https://a74632eb.ngrok.io/posts/new/general"
+        //        let stringUrl = "https://da8a6a38.ngrok.io/api/v1/categories/general"
+        let stringUrl = "https://da8a6a38.ngrok.io/api/v1/categories/professional"
         let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
         // First
-        let jar = HTTPCookieStorage.shared
-        let cookieHeaderField = ["Set-Cookie": "_session_id=\(fetchSessionID());Secure"] // Or ["Set-Cookie": "key=value, key2=value2"] for multiple cookies
-        let cookies = HTTPCookie.cookies(withResponseHeaderFields: cookieHeaderField, for: url)
-        jar.setCookies(cookies, for: url, mainDocumentURL: url)
+        //let jar = HTTPCookieStorage.shared
+        // Or ["Set-Cookie": "key=value, key2=value2"] for multiple cookies
+        //let cookieHeaderField = ["Set-Cookie": "_session_id=\(fetchToken());Secure"]
+        //let cookies = HTTPCookie.cookies(withResponseHeaderFields: cookieHeaderField, for: url)
+        //jar.setCookies(cookies, for: url, mainDocumentURL: url)
         
 
         var req = URLRequest(url: url)
         req.httpMethod = "GET"
+        let token = fetchToken()
+        req.addValue(token, forHTTPHeaderField: "v1-token")
         // nouse
         //req.addValue("_session_id=\(fetchSessionID())", forHTTPHeaderField: "Cookie")
         
         let (data, response, error) = URLSession.shared.synchronousDataTask(with: req)
+        let httpResponse = response as? HTTPURLResponse
+        print(httpResponse?.statusCode)
+        let str: String? = String(data: data!, encoding: .utf8)
+        print(str)
+        if (error == nil) {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    
+    func encodeParameters(params: [String: String]) -> String {
+        let queryItems = params.map { URLQueryItem(name:$0, value:$1)}
+        var components = URLComponents()
+        components.queryItems = queryItems
+        return components.percentEncodedQuery ?? ""
+    }
+    
+    private func doPost() -> Bool {
+        let stringUrl = "https://da8a6a38.ngrok.io/api/v1/posts"
+        let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
+        // First
+        //let jar = HTTPCookieStorage.shared
+        // Or ["Set-Cookie": "key=value, key2=value2"] for multiple cookies
+        //let cookieHeaderField = ["Set-Cookie": "_session_id=\(fetchToken());Secure"]
+        //let cookies = HTTPCookie.cookies(withResponseHeaderFields: cookieHeaderField, for: url)
+        //jar.setCookies(cookies, for: url, mainDocumentURL: url)
+        
+        let aaa = "https://www.google.com.hk/search?ei=La17Xe"
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        let params: [String: String] = ["content": "　", "url": aaa, "category_id": "1"]
+        // Optional("{\"errors\":[\"投稿の説明（※必須） が入力されていません。\"]}")
+        let string = encodeParameters(params: params)
+        req.httpBody = string.data(using: .utf8)
+        print(string)
+        let token = fetchToken()
+        req.addValue(token, forHTTPHeaderField: "v1-token")
+        // nouse
+        //req.addValue("_session_id=\(fetchSessionID())", forHTTPHeaderField: "Cookie")
+        let session = URLSession.shared
+        let (data, response, error) = session.synchronousDataTask(with: req)
         let httpResponse = response as? HTTPURLResponse
         print(httpResponse?.statusCode)
         let str: String? = String(data: data!, encoding: .utf8)

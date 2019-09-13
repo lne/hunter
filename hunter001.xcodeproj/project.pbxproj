@@ -17,6 +17,8 @@
 		B60400E022D2453D00DA9C49 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60400DF22D2453D00DA9C49 /* ShareViewController.swift */; };
 		B60400E322D2453D00DA9C49 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B60400E122D2453D00DA9C49 /* MainInterface.storyboard */; };
 		B60400E722D2453D00DA9C49 /* testShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = B60400DD22D2453D00DA9C49 /* testShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B61351F5232B5C32007DDC75 /* TypeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61351F4232B5C32007DDC75 /* TypeViewController.swift */; };
+		B61351F7232BC1A2007DDC75 /* CategoryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61351F6232BC1A2007DDC75 /* CategoryViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,6 +78,8 @@
 		B60400E222D2453D00DA9C49 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
 		B60400E422D2453D00DA9C49 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B60400EC22D245AD00DA9C49 /* testShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = testShareExtension.entitlements; sourceTree = "<group>"; };
+		B61351F4232B5C32007DDC75 /* TypeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypeViewController.swift; sourceTree = "<group>"; };
+		B61351F6232BC1A2007DDC75 /* CategoryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryViewController.swift; sourceTree = "<group>"; };
 		B69B7B4222D4E6AC00512C64 /* 感謝×HUNTER.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "感謝×HUNTER.entitlements"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -172,6 +176,8 @@
 				B60400DF22D2453D00DA9C49 /* ShareViewController.swift */,
 				B60400E122D2453D00DA9C49 /* MainInterface.storyboard */,
 				B60400E422D2453D00DA9C49 /* Info.plist */,
+				B61351F4232B5C32007DDC75 /* TypeViewController.swift */,
+				B61351F6232BC1A2007DDC75 /* CategoryViewController.swift */,
 			);
 			path = testShareExtension;
 			sourceTree = "<group>";
@@ -379,6 +385,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B61351F5232B5C32007DDC75 /* TypeViewController.swift in Sources */,
+				B61351F7232BC1A2007DDC75 /* CategoryViewController.swift in Sources */,
 				B60400E022D2453D00DA9C49 /* ShareViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -11,7 +11,7 @@ import UIKit
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
     let suiteName: String = "group.thanks.hunter001"
-    let keyName: String = "sessionID"
+    let keyName: String = "token"
 
     var window: UIWindow?
     var viewController: ViewController!
@@ -28,36 +28,55 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         print("url : \(url.absoluteString)")
         print("scheme : \(url.scheme!)")
         print("host : \(url.host!)")
-        print("query : \(url.query!)")
-        if (url.query != nil) {
-            let sessionID = url.query!.split(separator: "=").last
-            print("sessionID : \(sessionID!)")
-            saveSessionID(sessionID: "\(sessionID!)")
-            fetchSessionID()
+        let action = url.host!
+        if action == "login" {
+            // After Login Process
+            if (url.query != nil) {
+                print("query : \(url.query!)")
+                let token = url.query!.split(separator: "=").last
+                saveToken(token: "\(token!)")
+            }
+        } else if action == "logout" {
+            // After Logout Process
+            deleteToken()
         }
         return true
     }
     
     // ---------------------------------------------
-    // Save session ID to UserDefaults
+    // Save token to UserDefaults
     // ---------------------------------------------
-    private func saveSessionID(sessionID: String) {
-        print("saveSessionID")
+    private func saveToken(token: String) {
+        print("saveToken")
         // Save Data
         let sharedDefaults: UserDefaults = UserDefaults(suiteName: suiteName)!
-        sharedDefaults.set(sessionID, forKey: keyName)
+        sharedDefaults.set(token, forKey: keyName)
         sharedDefaults.synchronize()
     }
     
     // ---------------------------------------------
-    // Fetch session ID from UserDefaults
+    // Fetch token from UserDefaults
     // ---------------------------------------------
-    private func fetchSessionID() -> String {
+    private func fetchToken() -> String {
+        print("fetchToken")
         // fetch Data
         let sharedDefaults: UserDefaults = UserDefaults(suiteName: suiteName)!
-        let sessionID = sharedDefaults.object(forKey: keyName)
-        print("fetchSessionID : \(sessionID!)")
-        return "\(sessionID!)"
+        let data = sharedDefaults.object(forKey: keyName)
+        if data != nil {
+            return data as! String
+        } else {
+            return ""
+        }
+    }
+    
+    // ---------------------------------------------
+    // Delete token from UserDefaults
+    // ---------------------------------------------
+    private func deleteToken() {
+        print("deleteToken")
+        // Delete Data
+        let sharedDefaults: UserDefaults = UserDefaults(suiteName: suiteName)!
+        sharedDefaults.removeObject(forKey: keyName)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
