@@ -11,6 +11,18 @@ import WebKit
 import SafariServices
 import Foundation
 
+typealias Codable = Decodable & Encodable
+
+struct HttpError: Codable {
+    let errors: Array<String>
+}
+
+struct CategoryCodable: Codable {
+    let id: Int
+    let name: String
+    let adult: Bool
+}
+
 class ViewController: UIViewController, WKNavigationDelegate {
 
     private var webView: WKWebView!
@@ -43,12 +55,21 @@ class ViewController: UIViewController, WKNavigationDelegate {
         
     }
     override func viewDidAppear(_ animated: Bool) {
-        doPost()
+//        doPost()
+        let stringUrl = "https://adbd88b6.ngrok.io/api/v1/categories/professional"
+        let categories = getCategories(stringUrl: stringUrl)
+        for (name, id) in categories {
+            print("\(id): \(name)")
+        }
+        let names = Array(categories.keys)
+        for name in names {
+            print(name)
+        }
         var webPage: String
         if (needLogin) {
-            webPage = "https://da8a6a38.ngrok.io/users/login?app=ios"
+            webPage = "https://adbd88b6.ngrok.io/users/login?app=ios"
         } else {
-            webPage = "https://da8a6a38.ngrok.io/"
+            webPage = "https://adbd88b6.ngrok.io/"
         }
         safariVC = SFSafariViewController(url: NSURL(string: webPage)! as URL)
         safariVC.delegate = self
@@ -84,8 +105,8 @@ class ViewController: UIViewController, WKNavigationDelegate {
     }
     
     private func authorize() -> Bool {
-        //        let stringUrl = "https://da8a6a38.ngrok.io/api/v1/categories/general"
-        let stringUrl = "https://da8a6a38.ngrok.io/api/v1/categories/professional"
+        //        let stringUrl = "https://adbd88b6.ngrok.io/api/v1/categories/general"
+        let stringUrl = "https://adbd88b6.ngrok.io/api/v1/categories/professional"
         let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
         // First
         //let jar = HTTPCookieStorage.shared
@@ -104,7 +125,8 @@ class ViewController: UIViewController, WKNavigationDelegate {
         
         let (data, response, error) = URLSession.shared.synchronousDataTask(with: req)
         let httpResponse = response as? HTTPURLResponse
-        print(httpResponse?.statusCode)
+        let statusCode = httpResponse?.statusCode
+        print(statusCode)
         let str: String? = String(data: data!, encoding: .utf8)
         print(str)
         if (error == nil) {
@@ -114,6 +136,40 @@ class ViewController: UIViewController, WKNavigationDelegate {
         }
     }
     
+    func getCategories(stringUrl: String) -> [String:Int] {
+        var jsonCategories: [CategoryCodable] = []
+
+        let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+
+        let token = fetchToken()
+        req.addValue(token, forHTTPHeaderField: "v1-token")
+
+        let session = URLSession.shared
+        let (data, response, _) = session.synchronousDataTask(with: req)
+        let httpResponse = response as? HTTPURLResponse
+        let statusCode = httpResponse?.statusCode
+        let str: String? = String(data: data!, encoding: .utf8)
+        print(str)
+        if statusCode == 200 && data != nil {
+            let decoder: JSONDecoder = JSONDecoder()
+            do {
+                jsonCategories = try decoder.decode([CategoryCodable].self, from: data!)
+                
+            } catch {
+                print(error.localizedDescription)
+                jsonCategories = []
+            }
+        }
+        
+        var categories: Dictionary = [String:Int]()
+        for category in jsonCategories {
+            print(category.name)
+            categories[category.name] = category.id
+        }
+        return categories
+    }
     
     func encodeParameters(params: [String: String]) -> String {
         let queryItems = params.map { URLQueryItem(name:$0, value:$1)}
@@ -123,7 +179,7 @@ class ViewController: UIViewController, WKNavigationDelegate {
     }
     
     private func doPost() -> Bool {
-        let stringUrl = "https://da8a6a38.ngrok.io/api/v1/posts"
+        let stringUrl = "https://adbd88b6.ngrok.io/api/v1/posts"
         let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
         // First
         //let jar = HTTPCookieStorage.shared
@@ -148,6 +204,20 @@ class ViewController: UIViewController, WKNavigationDelegate {
         let (data, response, error) = session.synchronousDataTask(with: req)
         let httpResponse = response as? HTTPURLResponse
         print(httpResponse?.statusCode)
+        if httpResponse?.statusCode != 201 {
+            var message: String = ""
+            if data != nil {
+                let decoder: JSONDecoder = JSONDecoder()
+                do {
+                    let json: HttpError = try decoder.decode(HttpError.self, from: data!)
+                    message = json.errors.first ?? ""
+                    
+                } catch {
+                    message = error.localizedDescription
+                }
+            }
+            print("message: \(message)")
+        }
         let str: String? = String(data: data!, encoding: .utf8)
         print(str)
         if (error == nil) {

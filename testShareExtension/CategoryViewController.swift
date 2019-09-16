@@ -27,6 +27,9 @@ class CategoryViewController: UIViewController {
     // Selected value
     var selectedValue: String = ""
     
+    // View Height
+    var parentViewHeight: CGFloat = 200
+    
     // Data list
     var data: Array<String> = []
     
@@ -42,7 +45,7 @@ class CategoryViewController: UIViewController {
         
         // Table view size
         let viewWidth: CGFloat = view.frame.width - 30
-        let viewHeight: CGFloat = view.frame.height
+        let viewHeight: CGFloat = 225
         tableView.frame = CGRect(x: 0, y: 0, width: viewWidth, height: viewHeight)
         
         // Delegate
