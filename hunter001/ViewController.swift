@@ -23,6 +23,12 @@ struct CategoryCodable: Codable {
     let adult: Bool
 }
 
+struct TypeCodable: Codable {
+    let type: String
+    let name: String
+    let resource_path: String
+}
+
 class ViewController: UIViewController, WKNavigationDelegate {
 
     private var webView: WKWebView!
@@ -56,20 +62,15 @@ class ViewController: UIViewController, WKNavigationDelegate {
     }
     override func viewDidAppear(_ animated: Bool) {
 //        doPost()
-        let stringUrl = "https://adbd88b6.ngrok.io/api/v1/categories/professional"
-        let categories = getCategories(stringUrl: stringUrl)
-        for (name, id) in categories {
-            print("\(id): \(name)")
-        }
-        let names = Array(categories.keys)
-        for name in names {
-            print(name)
+        let types = getTypes()
+        for (t) in types {
+            print("\(t.type): \(t.name): \(t.resource_path)")
         }
         var webPage: String
         if (needLogin) {
-            webPage = "https://adbd88b6.ngrok.io/users/login?app=ios"
+            webPage = "https://stage.kanshahunter.com/users/login?app=ios"
         } else {
-            webPage = "https://adbd88b6.ngrok.io/"
+            webPage = "https://stage.kanshahunter.com/"
         }
         safariVC = SFSafariViewController(url: NSURL(string: webPage)! as URL)
         safariVC.delegate = self
@@ -104,40 +105,9 @@ class ViewController: UIViewController, WKNavigationDelegate {
         }
     }
     
-    private func authorize() -> Bool {
-        //        let stringUrl = "https://adbd88b6.ngrok.io/api/v1/categories/general"
-        let stringUrl = "https://adbd88b6.ngrok.io/api/v1/categories/professional"
-        let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
-        // First
-        //let jar = HTTPCookieStorage.shared
-        // Or ["Set-Cookie": "key=value, key2=value2"] for multiple cookies
-        //let cookieHeaderField = ["Set-Cookie": "_session_id=\(fetchToken());Secure"]
-        //let cookies = HTTPCookie.cookies(withResponseHeaderFields: cookieHeaderField, for: url)
-        //jar.setCookies(cookies, for: url, mainDocumentURL: url)
-        
-
-        var req = URLRequest(url: url)
-        req.httpMethod = "GET"
-        let token = fetchToken()
-        req.addValue(token, forHTTPHeaderField: "v1-token")
-        // nouse
-        //req.addValue("_session_id=\(fetchSessionID())", forHTTPHeaderField: "Cookie")
-        
-        let (data, response, error) = URLSession.shared.synchronousDataTask(with: req)
-        let httpResponse = response as? HTTPURLResponse
-        let statusCode = httpResponse?.statusCode
-        print(statusCode)
-        let str: String? = String(data: data!, encoding: .utf8)
-        print(str)
-        if (error == nil) {
-            return true
-        } else {
-            return false
-        }
-    }
-    
-    func getCategories(stringUrl: String) -> [String:Int] {
-        var jsonCategories: [CategoryCodable] = []
+    func getTypes() -> [TypeCodable] {
+        var types: [TypeCodable] = []
+        let stringUrl = "https://stage.kanshahunter.com/api/v1/categories"
 
         let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
         var req = URLRequest(url: url)
@@ -145,6 +115,7 @@ class ViewController: UIViewController, WKNavigationDelegate {
 
         let token = fetchToken()
         req.addValue(token, forHTTPHeaderField: "v1-token")
+        req.addValue("QVJJR0FUT1U=", forHTTPHeaderField: "X-KANSHA")
 
         let session = URLSession.shared
         let (data, response, _) = session.synchronousDataTask(with: req)
@@ -155,20 +126,15 @@ class ViewController: UIViewController, WKNavigationDelegate {
         if statusCode == 200 && data != nil {
             let decoder: JSONDecoder = JSONDecoder()
             do {
-                jsonCategories = try decoder.decode([CategoryCodable].self, from: data!)
+                types = try decoder.decode([TypeCodable].self, from: data!)
                 
             } catch {
                 print(error.localizedDescription)
-                jsonCategories = []
+                types = []
             }
         }
-        
-        var categories: Dictionary = [String:Int]()
-        for category in jsonCategories {
-            print(category.name)
-            categories[category.name] = category.id
-        }
-        return categories
+
+        return types
     }
     
     func encodeParameters(params: [String: String]) -> String {

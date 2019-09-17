@@ -2,8 +2,8 @@
 //  ShareViewController.swift
 //  testShareExtension
 //
-//  Created by weidongfeng on 2019/07/08.
-//  Copyright © 2019 weidongfeng. All rights reserved.
+//  Created by weidongfeng on 2019/09/08.
+//  Copyright © 2019 Cohcoh Co., Ltd. All rights reserved.
 //
 
 import UIKit
@@ -23,33 +23,63 @@ struct CategoryCodable: Codable {
     let adult: Bool
 }
 
+struct TypeCodable: Codable {
+    let type: String
+    let name: String
+    let resource_path: String
+}
+
+struct RemainCodable: Codable {
+    let remain: Int
+}
+
+// *********************************************
+// ShareViewController
+// *********************************************
 class ShareViewController: SLComposeServiceViewController,
                            TypeViewDelegate, CategoryViewDelegate {
     
     let suiteName: String = "group.thanks.hunter001"
     let keyName: String   = "token"
-    let host: String      = "https://adbd88b6.ngrok.io/"
+    let host: String      = "https://stage.kanshahunter.com"
+    let env: String       = "stage"
+
+    let typesBaseURL      = "/api/v1/categories"
+    let postBaseURL       = "/api/v1/posts"
+    let remainBaseURL     = "/api/v1/users/post_remain"
     let general           = "general"
     let professional      = "professional"
-    let categoriesBaseURL = "api/v1/categories/"
-    let postBaseURL       = "api/v1/posts"
     let unselected        = "(未選択)"
     let selectTypeFiest   = "(投稿先を選択してください)"
     let myTitle           = "感謝×HUNTER"
+    let typeItemTitle     = "投稿先"
+    let categoryItemTitle = "カテゴリ"
+    let errorMsgLogin     = "ログインしてから投稿してください。"
+    let errorMsgServer    = "サーバに接続できませんでした。"
+    let errorMsgLimited   = "投稿は一日に3回までとなっております。明日のご投稿をお待ちしております。"
+    let errorMsgURL       = "投稿するURLを選択してください。"
+    let strPlaceholder    = "(説明を入力してください)"
+    let strBeforePostBtn  = "投稿(残"
+    let strAfterPostBtn   = "回)"
 
-    let typeItem: SLComposeSheetConfigurationItem = SLComposeSheetConfigurationItem()
+    let typeItem: SLComposeSheetConfigurationItem     = SLComposeSheetConfigurationItem()
     let categoryItem: SLComposeSheetConfigurationItem = SLComposeSheetConfigurationItem()
     
-    var typeDictionary: Dictionary = [String: String]()
-    var typeArray: Array<String> = []
-    var categoryGeneralDictionary: Dictionary = [String: Int]()
-    var categoryGeneralArray: Array<String> = []
-    var categoryProfessionalDictionary: Dictionary = [String: Int]()
-    var categoryProfessionalArray: Array<String> = []
-    var remainPostTimes: Int = 0
-    var token: String = ""
+    var typeDictionary: Dictionary                    = [String: String]()
+    var typeArray: Array<String>                      = []
+    var categoryGeneralDictionary: Dictionary         = [String: Int]()
+    var categoryGeneralArray: Array<String>           = []
+    var categoryProfessionalDictionary: Dictionary    = [String: Int]()
+    var categoryProfessionalArray: Array<String>      = []
+    var remainPostTimes: Int         = 0
+    var token: String                = ""
+    var shareURL: String?            = nil
     var loadingErrorMessage: String? = nil
+    
 
+    // ---------------------------------------------
+    // Validation of post contents
+    // ---------------------------------------------
     override func isContentValid() -> Bool {
         // Do validation of contentText and/or NSExtensionContext attachments here
         var valid: Bool = remainPostTimes > 0
@@ -57,9 +87,45 @@ class ShareViewController: SLComposeServiceViewController,
         valid = valid && fetchCategoryID() > 0
         // Token exists
         valid = valid && token.count > 0
+        // Content exists
         let content = fetchContent()
         valid = valid && !content.isBlank
+        // URL exists
+        valid = valid && validURL()
         return valid
+    }
+    
+    // ---------------------------------------------
+    // Validation of post contents
+    // ---------------------------------------------
+    private func validURL() -> Bool {
+        if shareURL != nil {
+            return true
+        }
+        let extensionItem: NSExtensionItem = self.extensionContext?.inputItems.first as! NSExtensionItem
+        let itemProvider = extensionItem.attachments?.first ?? NSItemProvider()
+        let puclicURL = String(kUTTypeURL)  // "public.url"
+        let hasURL = itemProvider.hasItemConformingToTypeIdentifier(puclicURL)
+
+        return hasURL
+    }
+
+    // ---------------------------------------------
+    // To add configuration options via table cells at the bottom of the sheet,
+    // return an array of SLComposeSheetConfigurationItem here.
+    // ---------------------------------------------
+    override func configurationItems() -> [Any]! {
+        // Initialize typeItem
+        typeItem.title = typeItemTitle
+        typeItem.value = unselected
+        typeItem.tapHandler = showTypeView
+        
+        // Initialize categoryItem
+        categoryItem.title = categoryItemTitle
+        categoryItem.value = selectTypeFiest
+        categoryItem.tapHandler = showCategoryView
+        
+        return [typeItem, categoryItem]
     }
 
     // ---------------------------------------------
@@ -68,25 +134,7 @@ class ShareViewController: SLComposeServiceViewController,
     override func didSelectPost() {
         post()
     }
-    
-    // ---------------------------------------------
-    // To add configuration options via table cells at the bottom of the sheet,
-    // return an array of SLComposeSheetConfigurationItem here.
-    // ---------------------------------------------
-    override func configurationItems() -> [Any]! {
-        // Initialize typeItem
-        typeItem.title = "投稿先"
-        typeItem.value = unselected
-        typeItem.tapHandler = showTypeView
-        
-        // Initialize categoryItem
-        categoryItem.title = "カテゴリ"
-        categoryItem.value = selectTypeFiest
-        categoryItem.tapHandler = showCategoryView
-        
-        return [typeItem, categoryItem]
-    }
-    
+
     // ---------------------------------------------
     // Post after click post button
     // ---------------------------------------------
@@ -98,6 +146,7 @@ class ShareViewController: SLComposeServiceViewController,
         
         // Post process
         if itemProvider.hasItemConformingToTypeIdentifier(puclicURL) {
+            // When publicURL exists
             itemProvider.loadItem(forTypeIdentifier: puclicURL, options: nil, completionHandler: { (item, error) in
                 // Get URL and do post
                 if let nsURL: NSURL = item as? NSURL {
@@ -105,10 +154,12 @@ class ShareViewController: SLComposeServiceViewController,
                     self.post(url: url)
                 }
             })
+        } else if shareURL != nil {
+            // When shareURL exists
+            self.post(url: shareURL!)
+        } else {
+            cancel()
         }
-        
-        // Tells the host app to complete the app extension request with an array of result items
-        //self.extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
     }
     
     // ---------------------------------------------
@@ -131,7 +182,7 @@ class ShareViewController: SLComposeServiceViewController,
             }))
             present(alert, animated: true, completion: nil)
         } else {
-            self.extensionContext?.cancelRequest(withError: NSError(domain:"", code: -1, userInfo:nil))
+            cancel()
         }
     }
 
@@ -160,6 +211,9 @@ class ShareViewController: SLComposeServiceViewController,
 
         // Set token to http header
         req.addValue(token, forHTTPHeaderField: "v1-token")
+        if env == "stage" {
+            req.addValue("QVJJR0FUT1U=", forHTTPHeaderField: "X-KANSHA")
+        }
 
         // Set http body
         let strCategoryID = String(category_id)
@@ -176,22 +230,30 @@ class ShareViewController: SLComposeServiceViewController,
         let statusCode = httpResponse?.statusCode
         var errorMessage: String?
         if statusCode != 201 {
-            if data != nil {
-                let decoder: JSONDecoder = JSONDecoder()
-                do {
-                    let json: HttpError = try decoder.decode(HttpError.self, from: data!)
-                    errorMessage = json.errors.first ?? "Unknown error"
-                    
-                } catch let error as NSError {
-                    errorMessage = error.localizedDescription
-                }
-            } else if (httpError != nil) {
-                errorMessage = httpError?.localizedDescription
-            }
+            errorMessage = parseHttpError(data: data, httpError: httpError)
         }
         return errorMessage
     }
-    
+
+    // ---------------------------------------------
+    // Parse http error
+    // ---------------------------------------------
+    private func parseHttpError(data: Data?, httpError: Error?) -> String? {
+        var errorMessage: String?
+        if data != nil {
+            let decoder: JSONDecoder = JSONDecoder()
+            do {
+                let json: HttpError = try decoder.decode(HttpError.self, from: data!)
+                errorMessage = json.errors.first ?? "Unknown error"
+                
+            } catch let error as NSError {
+                errorMessage = error.localizedDescription
+            }
+        } else if (httpError != nil) {
+            errorMessage = httpError?.localizedDescription
+        }
+        return errorMessage
+    }
     // ---------------------------------------------
     // Fetch content for post
     // ---------------------------------------------
@@ -276,14 +338,23 @@ class ShareViewController: SLComposeServiceViewController,
         validate()
     }
 
+    // ---------------------------------------------
+    // Validate contents
+    // ---------------------------------------------
     private func validate() {
         validateContent()
     }
 
+    // ---------------------------------------------
+    // Event on text changed
+    // ---------------------------------------------
     override func textViewDidChange(_ textView: UITextView) {
         validate()
     }
 
+    // ---------------------------------------------
+    // Initialize on loading view
+    // ---------------------------------------------
     override func loadView() {
         super.loadView()
 
@@ -291,6 +362,9 @@ class ShareViewController: SLComposeServiceViewController,
         initialize()
     }
     
+    // ---------------------------------------------
+    // Show error when view will appear
+    // ---------------------------------------------
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         if loadingErrorMessage != nil {
@@ -305,26 +379,54 @@ class ShareViewController: SLComposeServiceViewController,
     override func viewDidLoad() {
         super.viewDidLoad()
         self.title = myTitle;
-        self.placeholder = "(説明を入力してください)"
+        self.placeholder = strPlaceholder
         
         // Edit post button name
         let c: UIViewController = self.navigationController!.viewControllers[0]
-        c.navigationItem.rightBarButtonItem!.title = "投稿(残1回)"
+        let title = strBeforePostBtn + String(remainPostTimes) + strAfterPostBtn
+        c.navigationItem.rightBarButtonItem!.title = title
 
-        // Edit text
+        // Init share URL and textView
+        initShareURL()
         let textView = self.textView
         textView?.attributedText = NSAttributedString(string: "", attributes: nil)
     }
-    
-    func showLoadingError() {
-//        let context = self.extensionContext!
-        let alert = UIAlertController(title: myTitle, message: loadingErrorMessage, preferredStyle: .alert)
+
+    // ---------------------------------------------
+    // Initialize shareURL
+    // ---------------------------------------------
+    private func initShareURL() {
+        let text: String = self.contentText
+        do {
+            let regex = try NSRegularExpression(pattern: "^https?://.+", options: [])
+            let resultNum = regex.numberOfMatches(in: text, options: NSRegularExpression.MatchingOptions(rawValue: 0) , range: NSMakeRange(0, text.count))
+            if resultNum >= 1 {
+                shareURL = text
+            }
+        } catch {
+            shareURL = nil
+        }
+    }
+
+    // ---------------------------------------------
+    // Show error by UIAlertController
+    // ---------------------------------------------
+    func showError(message: String) {
+        let alert = UIAlertController(title: myTitle, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: { (_) in
-//            context.completeRequest(returningItems: nil, completionHandler: nil)
             self.cancel()
             
         }))
         present(alert, animated: true, completion: nil)
+    }
+    
+    // ---------------------------------------------
+    // Show error before share view
+    // ---------------------------------------------
+    func showLoadingError() {
+        if loadingErrorMessage != nil {
+            showError(message: loadingErrorMessage!)
+        }
     }
 
     // ---------------------------------------------
@@ -345,30 +447,43 @@ class ShareViewController: SLComposeServiceViewController,
     // Initialize values
     // ---------------------------------------------
     private func initialize() {
+        var generalURL: String = ""
+        var professionalURL: String = ""
         // Init type
-        typeArray = ["一般", "専門"]
-        typeDictionary = [typeArray.first!: general, typeArray.last!: professional]
+        let types = getTypes()
+        for type in types {
+            typeArray.append(type.name)
+            typeDictionary[type.name] = type.type
+            if type.type == general {
+                generalURL = host + type.resource_path
+            } else if type.type == professional {
+                professionalURL = host + type.resource_path
+            }
+        }
 
         // Init category
-        let categoriesURL = host + categoriesBaseURL
-        let generalURL = categoriesURL + general
-        let categoryGeneralValues = getCategories(stringUrl: generalURL)
-        categoryGeneralArray = categoryGeneralValues.0
-        categoryGeneralDictionary = categoryGeneralValues.1
-        let professionalURL = categoriesURL + professional
-        let categoryProfessionalValues  = getCategories(stringUrl: professionalURL)
-        categoryProfessionalArray = categoryProfessionalValues.0
-        categoryProfessionalDictionary = categoryProfessionalValues.1
+        if generalURL.count > 0 {
+            let categoryGeneralValues = getCategories(stringUrl: generalURL)
+            categoryGeneralArray = categoryGeneralValues.0
+            categoryGeneralDictionary = categoryGeneralValues.1
+        }
+        if professionalURL.count > 0 {
+            let categoryProfessionalValues  = getCategories(stringUrl: professionalURL)
+            categoryProfessionalArray = categoryProfessionalValues.0
+            categoryProfessionalDictionary = categoryProfessionalValues.1
+        }
         
         // Init remain post times
-        remainPostTimes = 1
+        remainPostTimes = getRemainTimes()
         
         // Init token
         token = fetchToken()
         
+        // Init URL
+        
+        
         // Check error
         loadingErrorMessage = getLoadingErrorMessage()
-        
     }
 
     // ---------------------------------------------
@@ -378,15 +493,84 @@ class ShareViewController: SLComposeServiceViewController,
         var errorMessage: String? = nil
         let tokenInvalid = token.count == 0
         if tokenInvalid {
-            errorMessage = "ログインしてから投稿してください。"
+            errorMessage = errorMsgLogin
         } else {
             let categoryInvalid = categoryGeneralArray.count == 0 ||
                 categoryProfessionalArray.count == 0
             if categoryInvalid {
-                errorMessage = "サーバに接続できませんでした。"
+                errorMessage = errorMsgServer
+            } else if remainPostTimes == 0 {
+                errorMessage = errorMsgLimited
+            } else if !validURL() {
+                errorMessage = errorMsgURL
             }
         }
         return errorMessage
+    }
+
+    // ---------------------------------------------
+    // Get remainTimes from server
+    // ---------------------------------------------
+    func getRemainTimes() -> Int {
+        var times = 0
+        let stringUrl = host + remainBaseURL
+        
+        let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        
+        let token = fetchToken()
+        req.addValue(token, forHTTPHeaderField: "v1-token")
+        if env == "stage" {
+            req.addValue("QVJJR0FUT1U=", forHTTPHeaderField: "X-KANSHA")
+        }
+        let session = URLSession.shared
+        let (data, response, _) = session.synchronousDataTask(with: req)
+        let httpResponse = response as? HTTPURLResponse
+        let statusCode = httpResponse?.statusCode
+        if statusCode == 200 && data != nil {
+            let decoder: JSONDecoder = JSONDecoder()
+            do {
+                let remainCodable = try decoder.decode(RemainCodable.self, from: data!)
+                times = remainCodable.remain
+            } catch {
+                times = 0
+            }
+        }
+        
+        return times
+    }
+    // ---------------------------------------------
+    // Get categories from server
+    // ---------------------------------------------
+    func getTypes() -> [TypeCodable] {
+        var types: [TypeCodable] = []
+        let stringUrl = host + typesBaseURL
+        
+        let url = URL(string: stringUrl.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)!
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        
+        let token = fetchToken()
+        req.addValue(token, forHTTPHeaderField: "v1-token")
+        if env == "stage" {
+            req.addValue("QVJJR0FUT1U=", forHTTPHeaderField: "X-KANSHA")
+        }
+        let session = URLSession.shared
+        let (data, response, _) = session.synchronousDataTask(with: req)
+        let httpResponse = response as? HTTPURLResponse
+        let statusCode = httpResponse?.statusCode
+        if statusCode == 200 && data != nil {
+            let decoder: JSONDecoder = JSONDecoder()
+            do {
+                types = try decoder.decode([TypeCodable].self, from: data!)
+                
+            } catch {
+                types = []
+            }
+        }
+        
+        return types
     }
 
     // ---------------------------------------------
@@ -401,7 +585,10 @@ class ShareViewController: SLComposeServiceViewController,
         
         let token = fetchToken()
         req.addValue(token, forHTTPHeaderField: "v1-token")
-        
+        if env == "stage" {
+            req.addValue("QVJJR0FUT1U=", forHTTPHeaderField: "X-KANSHA")
+        }
+
         let session = URLSession.shared
         let (data, response, _) = session.synchronousDataTask(with: req)
         let httpResponse = response as? HTTPURLResponse
@@ -413,7 +600,6 @@ class ShareViewController: SLComposeServiceViewController,
                 jsonCategories = try decoder.decode([CategoryCodable].self, from: data!)
                 
             } catch {
-                print(error.localizedDescription)
                 jsonCategories = []
             }
         }
