@@ -1,8 +1,8 @@
 //
 //  ShareViewController.swift
-//  testShareExtension
+//  ShareExtension
 //
-//  Created by weidongfeng on 2019/09/08.
+//  Created by dongfeng.wei on 2019/09/08.
 //  Copyright © 2019 Cohcoh Co., Ltd. All rights reserved.
 //
 
@@ -11,24 +11,29 @@ import Social
 import MobileCoreServices
 import Foundation
 
+// JSON parser
 typealias Codable = Decodable & Encodable
 
+// Http error parsing by JSONDecoder
 struct HttpError: Codable {
     let errors: Array<String>
 }
 
+// Categories parsing by JSONDecoder
 struct CategoryCodable: Codable {
     let id: Int
     let name: String
     let adult: Bool
 }
 
+// Post types parsing by JSONDecoder
 struct TypeCodable: Codable {
     let type: String
     let name: String
     let resource_path: String
 }
 
+// Remain post times parsing by JSONDecoder
 struct RemainCodable: Codable {
     let remain: Int
 }
@@ -49,6 +54,7 @@ class ShareViewController: SLComposeServiceViewController,
     let remainBaseURL     = "/api/v1/users/post_remain"
     let general           = "general"
     let professional      = "professional"
+
     let unselected        = "(未選択)"
     let selectTypeFiest   = "(投稿先を選択してください)"
     let myTitle           = "感謝×HUNTER"
@@ -472,16 +478,13 @@ class ShareViewController: SLComposeServiceViewController,
             categoryProfessionalArray = categoryProfessionalValues.0
             categoryProfessionalDictionary = categoryProfessionalValues.1
         }
-        
+
         // Init remain post times
         remainPostTimes = getRemainTimes()
-        
+
         // Init token
         token = fetchToken()
-        
-        // Init URL
-        
-        
+
         // Check error
         loadingErrorMessage = getLoadingErrorMessage()
     }
@@ -540,6 +543,7 @@ class ShareViewController: SLComposeServiceViewController,
         
         return times
     }
+
     // ---------------------------------------------
     // Get categories from server
     // ---------------------------------------------

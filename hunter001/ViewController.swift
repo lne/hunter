@@ -2,8 +2,8 @@
 //  ViewController.swift
 //  hunter001
 //
-//  Created by weidongfeng on 2019/07/07.
-//  Copyright © 2019 weidongfeng. All rights reserved.
+//  Created by dongfeng.wei on 2019/07/07.
+//  Copyright © 2019 Cohcoh Co., Ltd. All rights reserved.
 //
 
 import UIKit
@@ -194,6 +194,9 @@ class ViewController: UIViewController, WKNavigationDelegate {
     }
 }
 
+// *********************************************
+// Extension of URLSession
+// *********************************************
 extension URLSession {
     func synchronousDataTask(with url: URLRequest) -> (Data?, URLResponse?, Error?) {
         var data: Data?

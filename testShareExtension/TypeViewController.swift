@@ -1,9 +1,9 @@
 //
 //  TypeViewController.swift
-//  testShareExtension
+//  ShareExtension
 //
-//  Created by weidongfeng on 2019/09/13.
-//  Copyright © 2019 weidongfeng. All rights reserved.
+//  Created by dongfeng.wei on 2019/09/13.
+//  Copyright © 2019 Cohcoh Co., Ltd. All rights reserved.
 //
 
 import UIKit
